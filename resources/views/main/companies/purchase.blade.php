@@ -6,22 +6,22 @@
                 <div class="col-lg-12">
                     @include('partials.alerts')
                     <div class="card">
-                        <div class="card-header font-weight-bold">Purchase History For <span style="color: maroon">({{ $company_info->item_company_name }})</span> <a href="javascript:void(0)" class="btn btn-primary btn-xs btn-rounded" data-toggle="modal" data-target="#add_company_user" class=""><i class="fa fa-plus-circle"></i> Add New</a></div>
+                        <div class="card-header font-weight-bold">Accounts Details For <span style="color: maroon">({{ $company_info->item_company_name }})</span> <a href="javascript:void(0)" class="btn btn-primary btn-xs btn-rounded" data-toggle="modal" data-target="#add_company_user" class=""><i class="fa fa-plus-circle"></i> Add New</a></div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-4" style="height: 50px;border: 1px solid #F3F3F4;margin-bottom: 30px">
                                     <h4 style="font-weight: bold;color: blue;padding: 10px">
-                                        Total Purchase Amount {{ $total_purchase != "" ? number_format($total_purchase, 2, '.', '') : '0.00' }} {{ $currency }}
+                                        Total Debit Amount {{ $total_purchase != "" ? number_format($total_purchase, 2, '.', '') : '0.00' }} {{ $currency }}
                                     </h4>
                                 </div>
                                 <div class="col-md-4" style="height: 50px;border: 1px solid #F3F3F4;margin-bottom: 30px">
                                     <h4 style="font-weight: bold;color: green;padding: 10px">
-                                        Total Bill Paid Amount {{ $total_paid_amount != "" ? number_format($total_paid_amount, 2, '.', '') : '0.00' }} {{ $currency }}
+                                        Total Credit Amount {{ $total_paid_amount != "" ? number_format($total_paid_amount, 2, '.', '') : '0.00' }} {{ $currency }}
                                     </h4>
                                 </div>
                                 <div class="col-md-4" style="height: 50px;border: 1px solid #F3F3F4;margin-bottom: 30px">
                                     <h4 style="font-weight: bold;color: maroon;padding: 10px">
-                                        Total Due Amount {{ $total_due_amount != "" ? number_format($total_due_amount, 2, '.', '') : '0.00' }} {{ $currency }}
+                                        Current Balance {{ $total_due_amount != "" ? number_format($total_due_amount, 2, '.', '') : '0.00' }} {{ $currency }}
                                     </h4>
                                 </div>
                             </div>
@@ -60,7 +60,7 @@
                                                 @endif
                                                 <td>{{ $obj->purchase_mode }}</td>
                                                 <td>
-                                                    <a href="javascript:void(0)" data-toggle="modal" data-target="#bill_{{ $obj->purchase_id }}"><i class="fa fa-history"></i> Billing History</a>
+                                                    <a href="javascript:void(0)" data-toggle="modal" data-target="#bill_{{ $obj->purchase_id }}"><i class="fa fa-pencil"></i> Edit</a>
                                                     <div id="bill_{{ $obj->purchase_id }}" class="modal fade" role="dialog">
                                                         <div class="modal-dialog modal-md">
                                                             <div class="modal-content" >
@@ -152,9 +152,19 @@
                                                     @csrf
                                                     <input type="hidden" name="purchase_company_id" value="{{ $company_info->item_company_id }}" />
                                                     <div class="card">
-                                                        <div class="card-header font-weight-bold">Add New Purchase From <span style="color: maroon"><?php echo $company_info->company_name; ?></span> <button type="button" class="close" data-dismiss="modal" >&times;</button></div>
+                                                        <div class="card-header font-weight-bold">Add New <span style="color: maroon"><?php echo $company_info->company_name; ?></span> <button type="button" class="close" data-dismiss="modal" >&times;</button></div>
                                                         <div class="card-body">
                                                             <div class="row">
+                                                                <div class="col-md-12">
+                                                                    <div class="form-group">
+                                                                        <label for="purchase_mode">Mode<b class="required_mark">*</b></label>
+                                                                        <select class="form-control" name="mode" id="mode" required>
+                                                                            <option value="">-- select --</option>
+                                                                            <option value="debit" @selected(old('purchase_mode')=='Paid')>Debit</option>
+                                                                            <option value="credit" @selected(old('purchase_mode')=='Due')>Credit</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
                                                                 <div class="col-md-12">
                                                                     <div class="form-group">
                                                                         <label for="purchase_date">Date<b class="required_mark">*</b></label>
@@ -169,18 +179,19 @@
                                                                 </div>
                                                                 <div class="col-md-12">
                                                                     <div class="form-group">
-                                                                        <label for="purchase_total_amount">Total Amount<b class="required_mark">*</b></label>
-                                                                        <input type="text" class="form-control" name="purchase_total_amount" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" value="{{ old('purchase_total_amount') }}" placeholder="Enter Total Amount" required />
+                                                                        <label for="purchase_mode">Payment Type<b class="required_mark">*</b></label>
+                                                                        <select class="form-control" name="payment_type" required>
+                                                                            <option value="">-- select --</option>
+                                                                            <option value="1" @selected(old('payment_type')=='1')>Cash</option>
+                                                                            <option value="2" @selected(old('payment_type')=='2')>Mobile Banking</option>
+                                                                            <option value="3" @selected(old('payment_type')=='3')>Bank Transfer</option>
+                                                                        </select>
                                                                     </div>
                                                                 </div>
                                                                 <div class="col-md-12">
                                                                     <div class="form-group">
-                                                                        <label for="purchase_mode">Purchase Mode<b class="required_mark">*</b></label>
-                                                                        <select class="form-control" name="purchase_mode" required>
-                                                                            <option value="">-- select --</option>
-                                                                            <option value="Paid" @selected(old('purchase_mode')=='Paid')>Paid</option>
-                                                                            <option value="Due" @selected(old('purchase_mode')=='Due')>Due</option>
-                                                                        </select>
+                                                                        <label for="purchase_total_amount">Total Amount<b class="required_mark">*</b></label>
+                                                                        <input type="text" class="form-control" name="purchase_total_amount" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');" value="{{ old('purchase_total_amount') }}" placeholder="Enter Total Amount" required />
                                                                     </div>
                                                                 </div>
                                                                 <div class="col-md-12">
