@@ -268,11 +268,10 @@ class CompaniesController extends Controller
                     return redirect()->back()->with('error', 'Company information not found.');
                 }
                 #getting purchase list
-                $purchase_list = PurchaseInfo::where('purchase_company_id',$company_id)->get();
-                $total_purchase = PurchaseInfo::where('purchase_company_id',$company_id)->sum('purchase_total_amount');
-                $total_paid_amount = (PurchaseBillPaid::where('bp_company_id',$company_id)->sum('bp_amount'));
-                $total_due_amount = $total_purchase-$total_paid_amount;
-                return view('main.companies.purchase', compact('company_info','purchase_list','total_purchase','total_due_amount','total_paid_amount'));
+                $purchase_list = PurchaseInfo::where('purchase_company_id',$company_id)->orderByDesc('purchase_id')->get();
+                $total_debit_amount = PurchaseInfo::where('purchase_company_id',$company_id)->where('mode','Debit')->sum('amount');
+                $total_credit_amount = PurchaseInfo::where('purchase_company_id',$company_id)->where('mode','Credit')->sum('amount');
+                return view('main.companies.purchase', compact('company_info','purchase_list','total_credit_amount','total_debit_amount'));
             }
             else{
                 return redirect()->back()->with('error','Invalid parameter or request');
@@ -283,17 +282,14 @@ class CompaniesController extends Controller
         }
     }
 
-    public function purchase_store(Request $request)
+    public function purchase_debit_store(Request $request)
     {
         $company_id = $request->purchase_company_id;
-
         if($company_id > 0 && is_numeric($company_id)) {
-
             $rules = [
                 'purchase_date' => 'required|date',
                 'purchase_invoice_no' => 'required|max:100',
-                'purchase_total_amount' => 'required|numeric',
-                'purchase_mode' => 'required|in:Paid,Due',
+                'amount' => 'required|numeric',
             ];
 
             $messages = [
@@ -301,10 +297,8 @@ class CompaniesController extends Controller
                 'purchase_date.date' => 'Invalid date format',
                 'purchase_invoice_no.required' => 'Invoice number required',
                 'purchase_invoice_no.max' => 'Invoice number cannot exceed 100 characters',
-                'purchase_total_amount.required' => 'Total purchase amount required',
-                'purchase_total_amount.numeric' => 'Total purchase amount must be a numeric value',
-                'purchase_mode.required' => 'Purchase mode required',
-                'purchase_mode.in' => 'Purchase mode must be either paid or due',
+                'amount.required' => 'Amount required',
+                'amount.numeric' => 'Amount must be a numeric value',
             ];
 
 
@@ -316,25 +310,16 @@ class CompaniesController extends Controller
 
             try {
                 DB::transaction(function () use ($request, $company_id) {
-                    $id = PurchaseInfo::insertGetId([
+                    PurchaseInfo::insert([
                         'purchase_company_id' => $company_id,
                         'purchase_date' => $request->purchase_date,
-                        'purchase_invoice_no' => $request->purchase_invoice_no,
-                        'purchase_total_amount' => $request->purchase_total_amount,
-                        'purchase_mode' => $request->purchase_mode,
+                        'payment_type' => $request->payment_type,
+                        'amount' => $request->amount,
+                        'mode' => 'Debit',
                     ]);
-                    if($request->purchase_mode == 'Paid') {
-                        PurchaseBillPaid::insert([
-                            'bp_purchase_id' => $id,
-                            'bp_company_id' => $company_id,
-                            'bp_amount' => $request->purchase_total_amount,
-                            'bp_date' => $request->purchase_date,
-                            'created_by' => Auth::user()->admin_id,
-                        ]);
-                    }
                 });
 
-                return redirect()->back()->with('success', 'Purchase information saved successfully');
+                return redirect()->back()->with('success', 'Purchase debit information saved successfully');
             } catch (QueryException $e) {
                 return redirect()->back()->with('error', 'Something went wrong. Please try again.' . $e->getMessage());
             }
@@ -343,25 +328,24 @@ class CompaniesController extends Controller
             return redirect()->back()->with('error','Invalid parameter or request');
         }
     }
-
-    public function purchase_due_update(Request $request)
+    public function purchase_credit_store(Request $request)
     {
-        $bp_purchase_id = $request->bp_purchase_id;
-        $bp_company_id = $request->bp_company_id;
-        $total_due_amount = $request->total_due_amount;
+        $company_id = $request->purchase_company_id;
 
-        if($bp_purchase_id > 0 && is_numeric($bp_purchase_id) && ($bp_company_id > 0) && is_numeric($bp_company_id) && $total_due_amount != "" && is_numeric($total_due_amount)) {
+        if($company_id > 0 && is_numeric($company_id)) {
 
             $rules = [
-                'bp_amount' => 'required|numeric',
-                'bp_date' => 'required|date',
+                'purchase_date' => 'required|date',
+                'payment_type' => 'required|max:100',
+                'amount' => 'required|numeric',
             ];
 
             $messages = [
-                'bp_amount.required' => 'Purchase due amount required',
-                'bp_date.required' => 'Purchase due amount required',
-                'bp_date.date' => 'Invalid date format',
-                'bp_amount.numeric' => 'Amount should be a numeric value',
+                'purchase_date.required' => 'Purchase date required',
+                'purchase_date.date' => 'Invalid date format',
+                'payment_type.required' => 'Payment type required',
+                'amount.required' => 'Amount required',
+                'amount.numeric' => 'Amount must be a numeric value',
             ];
 
 
@@ -371,33 +355,131 @@ class CompaniesController extends Controller
                 return redirect()->back()->with('inval', $validator->messages())->withInput();
             }
 
-            $amount = $request->bp_amount; $track = 0;
-
-            if($amount > $total_due_amount){
-                return redirect()->back()->with('error', 'Amount should be less than or equal to total due amount');
+            try {
+                DB::transaction(function () use ($request, $company_id) {
+                    PurchaseInfo::insert([
+                        'purchase_company_id' => $company_id,
+                        'purchase_date' => $request->purchase_date,
+                        'payment_type' => $request->payment_type,
+                        'amount' => $request->amount,
+                        'mode' => 'Credit',
+                    ]);
+                });
+                return redirect()->back()->with('success', 'Purchase credit information saved successfully');
+            } catch (QueryException $e) {
+                return redirect()->back()->with('error', 'Something went wrong. Please try again.' . $e->getMessage());
             }
-            else if($amount == $total_due_amount){
-                $track = 1;
+        }
+        else{
+            return redirect()->back()->with('error','Invalid parameter or request');
+        }
+    }
+
+    public function purchase_debit_update(Request $request)
+    {
+        $id = $request->id;
+        if($id > 0 && is_numeric($id)) {
+            $rules = [
+                'purchase_date' => 'required|date',
+                'purchase_invoice_no' => 'required|max:100',
+                'amount' => 'required|numeric',
+            ];
+
+            $messages = [
+                'purchase_date.required' => 'Purchase date required',
+                'purchase_date.date' => 'Invalid date format',
+                'purchase_invoice_no.required' => 'Invoice number required',
+                'purchase_invoice_no.max' => 'Invoice number cannot exceed 100 characters',
+                'amount.required' => 'Amount required',
+                'amount.numeric' => 'Amount must be a numeric value',
+            ];
+
+
+            $validator = Validator::make($request->all(), $rules, $messages);
+
+            if ($validator->fails()) {
+                return redirect()->back()->with('inval', $validator->messages())->withInput();
             }
 
             try {
-                DB::transaction(function () use ($request, $bp_purchase_id, $bp_company_id, $track) {
-                    PurchaseBillPaid::insert([
-                        'bp_purchase_id' => $bp_purchase_id,
-                        'bp_company_id' => $bp_company_id,
-                        'bp_amount' => $request->bp_amount,
-                        'bp_date' => $request->bp_date,
-                        'created_by' => Auth::user()->admin_id,
+                DB::transaction(function () use ($request, $id) {
+                    PurchaseInfo::where('id', $id)->update([
+                        'purchase_date' => $request->purchase_date,
+                        'purchase_invoice_no' => $request->purchase_invoice_no,
+                        'amount' => $request->amount,
+                        'mode' => 'Debit',
                     ]);
-                    if($track == 1)
-                    {
-                        PurchaseInfo::where('purchase_id',$bp_purchase_id)->update([
-                           'purchase_mode' => 'Paid',
-                            'updated_by' => Auth::user()->admin_id,
-                        ]);
-                    }
                 });
-                return redirect()->back()->with('success', 'Due amount paid successfully');
+
+                return redirect()->back()->with('success', 'Purchase debit information saved successfully');
+            } catch (QueryException $e) {
+                return redirect()->back()->with('error', 'Something went wrong. Please try again.' . $e->getMessage());
+            }
+        }
+        else{
+            return redirect()->back()->with('error','Invalid parameter or request');
+        }
+    }
+    public function purchase_credit_update(Request $request)
+    {
+        $id = $request->id;
+
+        if($id > 0 && is_numeric($id)) {
+
+            $rules = [
+                'purchase_date' => 'required|date',
+                'payment_type' => 'required|max:100',
+                'amount' => 'required|numeric',
+            ];
+
+            $messages = [
+                'purchase_date.required' => 'Purchase date required',
+                'purchase_date.date' => 'Invalid date format',
+                'payment_type.required' => 'Payment type required',
+                'amount.required' => 'Amount required',
+                'amount.numeric' => 'Amount must be a numeric value',
+            ];
+
+
+            $validator = Validator::make($request->all(), $rules, $messages);
+
+            if ($validator->fails()) {
+                return redirect()->back()->with('inval', $validator->messages())->withInput();
+            }
+
+            try {
+                DB::transaction(function () use ($request, $id) {
+                    PurchaseInfo::where('id', $id)->update([
+                        'purchase_date' => $request->purchase_date,
+                        'purchase_invoice_no' => $request->purchase_invoice_no,
+                        'amount' => $request->amount,
+                        'mode' => 'Credit',
+                    ]);
+                });
+                return redirect()->back()->with('success', 'Purchase credit saved successfully');
+            } catch (QueryException $e) {
+                return redirect()->back()->with('error', 'Something went wrong. Please try again.' . $e->getMessage());
+            }
+        }
+        else{
+            return redirect()->back()->with('error','Invalid parameter or request');
+        }
+    }
+
+    public function purchase_debit_credit_delete($id)
+    {
+        if($id > 0 && is_numeric($id)) {
+
+            $purchase_info = PurchaseInfo::where('id', $id)->first();
+            if(!$purchase_info) {
+                return redirect()->back()->with('error', 'Information not found');
+            }
+
+            try {
+                DB::transaction(function () use ($id) {
+                    PurchaseInfo::where('id', $id)->delete();
+                });
+                return redirect()->back()->with('success', 'Information deleted successfully');
             } catch (QueryException $e) {
                 return redirect()->back()->with('error', 'Something went wrong. Please try again.' . $e->getMessage());
             }

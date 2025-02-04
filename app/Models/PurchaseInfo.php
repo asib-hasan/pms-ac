@@ -14,7 +14,7 @@ class PurchaseInfo extends Model
         'purchase_company_id',
         'purchase_date',
         'purchase_invoice_no',
-        'purchase_total_amount',
+        'amount',
         'purchase_mode',
     ];
 

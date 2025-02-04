@@ -49,8 +49,11 @@ Route::middleware(['auth'])->group(function(){
     Route::post('company/user/update',[CompaniesController::class,'user_update']);
     Route::post('company/user/delete',[CompaniesController::class,'user_delete']);
     Route::get('company/purchase',[CompaniesController::class,'purchase']);
-    Route::post('company/purchase/store',[CompaniesController::class,'purchase_store']);
-    Route::post('company/purchase/due/update',[CompaniesController::class,'purchase_due_update']);
+    Route::post('/company/purchase/credit/store',[CompaniesController::class,'purchase_credit_store']);
+    Route::post('/company/purchase/debit/store',[CompaniesController::class,'purchase_debit_store']);
+    Route::post('/company/purchase/credit/update',[CompaniesController::class,'purchase_credit_update']);
+    Route::post('/company/purchase/debit/update',[CompaniesController::class,'purchase_debit_update']);
+    Route::post('/company/purchase/debit-credit/delete',[CompaniesController::class,'purchase_debit_credit_delete']);
     #items
     Route::get('item',[ItemController::class,'index']);
     Route::get('item/add',[ItemController::class,'add']);
