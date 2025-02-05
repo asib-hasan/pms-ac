@@ -53,7 +53,7 @@ Route::middleware(['auth'])->group(function(){
     Route::post('/company/purchase/debit/store',[CompaniesController::class,'purchase_debit_store']);
     Route::post('/company/purchase/credit/update',[CompaniesController::class,'purchase_credit_update']);
     Route::post('/company/purchase/debit/update',[CompaniesController::class,'purchase_debit_update']);
-    Route::post('/company/purchase/debit-credit/delete',[CompaniesController::class,'purchase_debit_credit_delete']);
+    Route::get('/company/purchase/debit-credit/delete/{id}',[CompaniesController::class,'purchase_debit_credit_delete']);
     #items
     Route::get('item',[ItemController::class,'index']);
     Route::get('item/add',[ItemController::class,'add']);

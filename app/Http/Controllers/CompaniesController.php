@@ -268,7 +268,7 @@ class CompaniesController extends Controller
                     return redirect()->back()->with('error', 'Company information not found.');
                 }
                 #getting purchase list
-                $purchase_list = PurchaseInfo::where('purchase_company_id',$company_id)->orderByDesc('purchase_id')->get();
+                $purchase_list = PurchaseInfo::where('purchase_company_id',$company_id)->orderByDesc('purchase_id')->paginate(8);
                 $total_debit_amount = PurchaseInfo::where('purchase_company_id',$company_id)->where('mode','Debit')->sum('amount');
                 $total_credit_amount = PurchaseInfo::where('purchase_company_id',$company_id)->where('mode','Credit')->sum('amount');
                 return view('main.companies.purchase', compact('company_info','purchase_list','total_credit_amount','total_debit_amount'));
@@ -313,6 +313,7 @@ class CompaniesController extends Controller
                     PurchaseInfo::insert([
                         'purchase_company_id' => $company_id,
                         'purchase_date' => $request->purchase_date,
+                        'purchase_invoice_no' => $request->purchase_invoice_no,
                         'payment_type' => $request->payment_type,
                         'amount' => $request->amount,
                         'mode' => 'Debit',
@@ -403,11 +404,10 @@ class CompaniesController extends Controller
 
             try {
                 DB::transaction(function () use ($request, $id) {
-                    PurchaseInfo::where('id', $id)->update([
+                    PurchaseInfo::where('purchase_id', $id)->update([
                         'purchase_date' => $request->purchase_date,
                         'purchase_invoice_no' => $request->purchase_invoice_no,
                         'amount' => $request->amount,
-                        'mode' => 'Debit',
                     ]);
                 });
 
@@ -449,11 +449,10 @@ class CompaniesController extends Controller
 
             try {
                 DB::transaction(function () use ($request, $id) {
-                    PurchaseInfo::where('id', $id)->update([
+                    PurchaseInfo::where('purchase_id', $id)->update([
                         'purchase_date' => $request->purchase_date,
                         'purchase_invoice_no' => $request->purchase_invoice_no,
                         'amount' => $request->amount,
-                        'mode' => 'Credit',
                     ]);
                 });
                 return redirect()->back()->with('success', 'Purchase credit saved successfully');
@@ -470,14 +469,14 @@ class CompaniesController extends Controller
     {
         if($id > 0 && is_numeric($id)) {
 
-            $purchase_info = PurchaseInfo::where('id', $id)->first();
+            $purchase_info = PurchaseInfo::where('purchase_id', $id)->first();
             if(!$purchase_info) {
                 return redirect()->back()->with('error', 'Information not found');
             }
 
             try {
                 DB::transaction(function () use ($id) {
-                    PurchaseInfo::where('id', $id)->delete();
+                    PurchaseInfo::where('purchase_id', $id)->delete();
                 });
                 return redirect()->back()->with('success', 'Information deleted successfully');
             } catch (QueryException $e) {
