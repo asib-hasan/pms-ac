@@ -36,7 +36,7 @@
                 <img src="{{ asset('images/ardi_logo.jpg') }}" height="auto" width="auto" class="mr-2" alt="logo"/>
             </a>
             <a class="navbar-brand brand-logo-mini" href="{{ url('dashboard') }}">
-                <img src="{{ asset('images/ardi_logo.png') }}" alt="logo"/>
+                <img src="{{ asset('images/ardi_logo.jpg') }}" alt="logo"/>
             </a>
         </div>
         <div class="navbar-menu-wrapper d-flex align-items-center justify-content-end">
